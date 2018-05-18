@@ -1,0 +1,24 @@
+<h><center> Sonal Unadkat Assignment 3 Report    </center> <br> Student Number: 301110334 <br> Fall 2015 CMPT 300  <br>   Professor: Brian G. Booth </h>
+
+<p> Assignment 4 Overview: <br>
+	Lyrebird, is a decryption program, which has the capability to take encrypted text files, and through a sequence of algorithms, produce the decrypted text files.  The motivation over the last few assignments, has been to enhance performance by not only handling decryption processes in a scheduled fashion among many controlled child processes, but in our latest iteration of Lyrebird, being able to remotely connect to a Lyrebird server, and decrypt as the "client" over the Internet using Sockets. 
+</p>
+
+<p> Assignment 4 Design and Implementation <br>
+	For Assignment 4, our Lyrebird program was split into two programs. The client and server program, both relied on the previous assignment to an Extent, but their implementation was dependent highly on their design.
+<br>
+	Server: The first part of the Lyrebird server, we had to be able to obtain the correct IP address and Port, and also be able to set up the Socket. To obtain the IP address, we had to use getifadders() function call, which would return a linked list of all the IP addresses linked to the computer.  As we are using TCP sockets, we must traverse through the list to see which IP address is part of the AF_NET (TCP) family.   Once we have obtained an IP address, using the following system calls:
+			Socket() - system call to set up a socket
+			Bind() - binds our IP addresses to the Socket
+			Listen()- listens for a connection
+
+		We now have a working socket. Using htons, and inet_pton, we can also obtain the randomly assigned port.  Using both the IP address and randomly assigned Port, we can now allow for the Lyrebird client connect to the socket. 
+
+	The second part of the Server, is to be able to be able to handle incoming message requests, and new client connection request. To implement this, we bring back the Select() function.  The design behind this, is to create a set of descriptors of all our current client connections and our main socket connection. Once activity has occurred, we can test against each descriptor using FD_ISSET(). If the activity is tested against the main socket, we can then handle the new incoming client connection, by accepting the condition and adding the new socket descriptor to set.  If the activity is not from the main socket, we can assume that the incoming message is coming from a client, and we can read from the socket. Depending on what is read from the connection we can decipher if the client has disconnected or ready for a new job.  In the server, the select function is the blocking function that will not proceed until it received activity from the children process. 
+<br>
+	Client:  The design of the Lyrebird Client is very similar to our previous assignment, as it is in charge of controlling the children processes in a scheduled manner.  The difference is, that now we must coordinate message passing between the child using pipes, and the server using sockets.  In the client, the read() function is a blocking function, which will ensure that the client and server coordinate in an orderly fashion.  Message passing is key in this program.  The child's decrytion status and pid was combined using sprintf. Which was sent back through the client-parent and back to the server which would be logged. Sending the file name to the client was similiar to Assignment 3 using fgets.  To signal termination, Lyrebird sends a "+" signal back to the client, which will initiate the client to finish.  Once there is no more client connected to the server, it will disconnect completely. 
+<br>
+	
+
+<p> Assignment 3 Testing: <br>
+	For lyrebird, testing, was conducted by first testing the client and server on the same computer.  This included testing for corner cases, such as handling file retrieval errors, abruptly ending child processes, and in the case of server unexcitingly terminating. The correct handling, would include a clean - up process of cleaning up not only the child process and their decryption, but also logging the remaining client handling.  As testing is limited to as many CSIL computers and terminals we can open, ideally to test true parallelism, is to use the test suite given from Assignment 2, especially the bigger files, and log how the server is handing out the files to the client in what fashion.  I was running into a problem though when testing on different computers, where due to the context switching handled separately on different machines. What would happen is that when reading in a buffer of 2050 bytes, if the client context switched , it may read half of the buffer. When it looped again, it would read in garbage bytes, which cause a pipe error.    Testing on a different machine was imperative to find these "hidden" bugs.  
